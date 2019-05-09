@@ -42,8 +42,10 @@
 //#define CONSOLE_UART	USART1
 
 void usart_console_puts_zeroterm(const char *s);
+
 void init_uart(void);
-void trace_if_needed(char* cmd);
+
+void trace_if_needed(char *cmd);
 
 /*
  * void usart_console_puts(char *s)
@@ -52,16 +54,15 @@ void trace_if_needed(char* cmd);
  * after the last character, as indicated by a NUL character, is
  * reached.
  */
-void usart_console_puts_zeroterm(const char *s)
-{
-	while (*s != '\000') {
+void usart_console_puts_zeroterm(const char *s) {
+    while (*s != '\000') {
         usart_console_putc(*s);
-		/* Add in a carraige return, after sending line feed */
-		if (*s == '\n') {
+        /* Add in a carraige return, after sending line feed */
+        if (*s == '\n') {
             usart_console_putc('\r');
-		}
-		s++;
-	}
+        }
+        s++;
+    }
 }
 
 void init_uart(void) {
@@ -75,10 +76,10 @@ void init_uart(void) {
     usart_enable(CONSOLE_UART);
 }
 
-void trace_if_needed(char* cmd) {
-	if (strcmp(cmd, "trace") == 0) {
-	    print_backtrace();
-	}
+void trace_if_needed(char *cmd) {
+    if (strcmp(cmd, "trace") == 0) {
+        print_backtrace();
+    }
 }
 
 /*
@@ -86,52 +87,51 @@ void trace_if_needed(char* cmd) {
  * on some of the pins, in this case connected to a
  * USART.
  */
-int main(void)
-{
-	char buf[128];
-	int	len;
+int main(void) {
+    char buf[128];
+    int len;
 
-	clock_setup(); /* initialize our clock */
+    clock_setup(); /* initialize our clock */
 
-	/* MUST enable the GPIO clock in ADDITION to the USART clock */
-	rcc_periph_clock_enable(RCC_GPIOA);
+    /* MUST enable the GPIO clock in ADDITION to the USART clock */
+    rcc_periph_clock_enable(RCC_GPIOA);
 
-	/* This example uses PA9 and PA10 for Tx and Rx respectively
-	 * but other pins are available for this role on USART1 (our chosen
-	 * USART) as it is connected to the programmer interface through
-	 * jumpers.
-	 */
-	gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO9 | GPIO10);
+    /* This example uses PA9 and PA10 for Tx and Rx respectively
+     * but other pins are available for this role on USART1 (our chosen
+     * USART) as it is connected to the programmer interface through
+     * jumpers.
+     */
+    gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO9 | GPIO10);
 
-	/* Actual Alternate function number (in this case 7) is part
-	 * depenedent, check the data sheet for the right number to
-	 * use.
-	 */
-	gpio_set_af(GPIOA, GPIO_AF7, GPIO9 | GPIO10);
+    /* Actual Alternate function number (in this case 7) is part
+     * depenedent, check the data sheet for the right number to
+     * use.
+     */
+    gpio_set_af(GPIOA, GPIO_AF7, GPIO9 | GPIO10);
 
-	/* This then enables the clock to the USART1 peripheral which is
-	 * attached inside the chip to the APB1 bus. Different peripherals
-	 * attach to different buses, and even some UARTS are attached to
-	 * APB1 and some to APB2, again the data sheet is useful here.
-	 * We use the rcc_periph_clock_enable function that knows on which bus
-	 * the peripheral is and sets things up accordingly.
-	 */
-	rcc_periph_clock_enable(RCC_USART1);
+    /* This then enables the clock to the USART1 peripheral which is
+     * attached inside the chip to the APB1 bus. Different peripherals
+     * attach to different buses, and even some UARTS are attached to
+     * APB1 and some to APB2, again the data sheet is useful here.
+     * We use the rcc_periph_clock_enable function that knows on which bus
+     * the peripheral is and sets things up accordingly.
+     */
+    rcc_periph_clock_enable(RCC_USART1);
 
-	init_uart();
+    init_uart();
 
-	/* At this point our console is ready to go so we can create our
-	 * simple application to run on it.
-	 */
-	printf("\nUART Demonstration Application\n");
-	while (1) {
+    /* At this point our console is ready to go so we can create our
+     * simple application to run on it.
+     */
+    printf("\nUART Demonstration Application\n");
+    while (1) {
         printf("Enter a string: ");
-		len = usart_console_gets(buf, 128);
-		if (len) {
+        len = usart_console_gets(buf, 128);
+        if (len) {
             printf("\nYou entered: '%s'\n", buf);
-			trace_if_needed(buf);
-		} else {
+            trace_if_needed(buf);
+        } else {
             printf("\nNo string entered\n");
-		}
-	}
+        }
+    }
 }
