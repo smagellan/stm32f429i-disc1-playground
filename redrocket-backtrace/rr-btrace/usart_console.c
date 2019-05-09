@@ -21,15 +21,16 @@
  * USART example (alternate console)
  */
 
+#include <stdio.h>
 #include <stdint.h>
 #include <string.h>
+#include <errno.h>
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/usart.h>
-#include <backtrace.h>
 #include "clock.h"
-
-#define BACKTRACE_SIZE 25
+#include "btrace.h"
+#include "stdlib_syscalls.h"
 
 /*
  * Some definitions of our console "functions" attached to the
@@ -38,108 +39,45 @@
  * These define sort of the minimum "library" of functions which
  * we can use on a serial port.
  */
+//#define CONSOLE_UART	USART1
 
-#define CONSOLE_UART	USART1
-
-void console_putc(char c);
-char console_getc(int wait);
-void console_puts(const char *s);
-int console_gets(char *s, int len);
-void trace_if_needed(char* cmd, backtrace_t *backtrace);
+void usart_console_puts_zeroterm(const char *s);
+void init_uart(void);
+void trace_if_needed(char* cmd);
 
 /*
- * console_putc(char c)
- *
- * Send the character 'c' to the USART, wait for the USART
- * transmit buffer to be empty first.
- */
-void console_putc(char c)
-{
-	uint32_t	reg;
-	do {
-		reg = USART_SR(CONSOLE_UART);
-	} while ((reg & USART_SR_TXE) == 0);
-	USART_DR(CONSOLE_UART) = (uint16_t) c & 0xff;
-}
-
-/*
- * char = console_getc(int wait)
- *
- * Check the console for a character. If the wait flag is
- * non-zero. Continue checking until a character is received
- * otherwise return 0 if called and no character was available.
- */
-char console_getc(int wait)
-{
-	uint32_t	reg;
-	do {
-		reg = USART_SR(CONSOLE_UART);
-	} while ((wait != 0) && ((reg & USART_SR_RXNE) == 0));
-	return (reg & USART_SR_RXNE) ? USART_DR(CONSOLE_UART) : '\000';
-}
-
-/*
- * void console_puts(char *s)
+ * void usart_console_puts(char *s)
  *
  * Send a string to the console, one character at a time, return
  * after the last character, as indicated by a NUL character, is
  * reached.
  */
-void console_puts(const char *s)
+void usart_console_puts_zeroterm(const char *s)
 {
 	while (*s != '\000') {
-		console_putc(*s);
+        usart_console_putc(*s);
 		/* Add in a carraige return, after sending line feed */
 		if (*s == '\n') {
-			console_putc('\r');
+            usart_console_putc('\r');
 		}
 		s++;
 	}
 }
 
-/*
- * int console_gets(char *s, int len)
- *
- * Wait for a string to be entered on the console, limited
- * support for editing characters (back space and delete)
- * end when a <CR> character is received.
- */
-int console_gets(char *s, int len)
-{
-	char *t = s;
-	char c;
-
-	*t = '\000';
-	/* read until a <CR> is received */
-	while ((c = console_getc(1)) != '\r') {
-		if ((c == '\010') || (c == '\127')) {
-			if (t > s) {
-				/* send ^H ^H to erase previous character */
-				console_puts("\010 \010");
-				t--;
-			}
-		} else {
-			*t = c;
-			console_putc(c);
-			if ((t - s) < len) {
-				t++;
-			}
-		}
-		/* update end of string with NUL */
-		*t = '\000';
-	}
-	return t - s;
+void init_uart(void) {
+    /* Set up USART/UART parameters using the libopencm3 helper functions */
+    usart_set_baudrate(CONSOLE_UART, 115200);
+    usart_set_databits(CONSOLE_UART, 8);
+    usart_set_stopbits(CONSOLE_UART, USART_STOPBITS_1);
+    usart_set_mode(CONSOLE_UART, USART_MODE_TX_RX);
+    usart_set_parity(CONSOLE_UART, USART_PARITY_NONE);
+    usart_set_flow_control(CONSOLE_UART, USART_FLOWCONTROL_NONE);
+    usart_enable(CONSOLE_UART);
 }
 
-void trace_if_needed(char* cmd, backtrace_t *bt) {
+void trace_if_needed(char* cmd) {
 	if (strcmp(cmd, "trace") == 0) {
-            console_puts("\nabout to trace\n");
-	    int count = backtrace_unwind(bt, BACKTRACE_SIZE);
-	    for (int i = 0; i < count; ++i) {
-		    console_puts(bt[i].name);
-		    console_puts("\n");
-	    }
-	    console_puts("done\n");
+	    print_backtrace();
 	}
 }
 
@@ -151,7 +89,6 @@ void trace_if_needed(char* cmd, backtrace_t *bt) {
 int main(void)
 {
 	char buf[128];
-	backtrace_t backtrace[BACKTRACE_SIZE];
 	int	len;
 
 	clock_setup(); /* initialize our clock */
@@ -181,29 +118,20 @@ int main(void)
 	 */
 	rcc_periph_clock_enable(RCC_USART1);
 
-	/* Set up USART/UART parameters using the libopencm3 helper functions */
-	usart_set_baudrate(CONSOLE_UART, 115200);
-	usart_set_databits(CONSOLE_UART, 8);
-	usart_set_stopbits(CONSOLE_UART, USART_STOPBITS_1);
-	usart_set_mode(CONSOLE_UART, USART_MODE_TX_RX);
-	usart_set_parity(CONSOLE_UART, USART_PARITY_NONE);
-	usart_set_flow_control(CONSOLE_UART, USART_FLOWCONTROL_NONE);
-	usart_enable(CONSOLE_UART);
+	init_uart();
 
 	/* At this point our console is ready to go so we can create our
 	 * simple application to run on it.
 	 */
-	console_puts("\nUART Demonstration Application\n");
+	printf("\nUART Demonstration Application\n");
 	while (1) {
-		console_puts("Enter a string: ");
-		len = console_gets(buf, 128);
+        printf("Enter a string: ");
+		len = usart_console_gets(buf, 128);
 		if (len) {
-			console_puts("\nYou entered : '");
-			console_puts(buf);
-			console_puts("'\n");
-			trace_if_needed(buf, backtrace);
+            printf("\nYou entered: '%s'\n", buf);
+			trace_if_needed(buf);
 		} else {
-			console_puts("\nNo string entered\n");
+            printf("\nNo string entered\n");
 		}
 	}
 }

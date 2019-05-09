@@ -2,13 +2,14 @@ PROJECT = rr-btrace
 BUILD_DIR = bin
 
 #SHARED_DIR = ../my-common-code
-CFILES = usart_console.c clock.c
+CFILES = usart_console.c clock.c stdlib_syscalls.c btrace.c
 
 CSTD=-std=c11
 INCLUDES=-I/home/vladimir/projects/backtrace/include/
-TGT_CFLAGS += -mpoke-function-name -funwind-tables -fno-omit-frame-pointer -fmessage-length=0 -fsigned-char
-TGT_LDFLAGS += --specs=rdimon.specs -L/home/vladimir/projects/backtrace/build/release/backtrace
+TGT_CFLAGS += -mpoke-function-name -funwind-tables -fno-omit-frame-pointer -fmessage-length=0 -fsigned-char -fstack-protector-strong
+TGT_LDFLAGS += -specs=nosys.specs -specs=rdimon.specs -L/home/vladimir/projects/backtrace/build/release/backtrace
 LDLIBS += -lbacktrace
+OPENCM3_DEFS += -DCONSOLE_UART=USART1 -D_FORTIFY_SOURCE=2
 
 # TODO - you will need to edit these two lines!
 DEVICE=stm32f429zit6
