@@ -1,22 +1,8 @@
 #! /bin/bash
 
+source common.sh;
 
-NEWLIB_NANO_HOME="$PWD/../.build/src/newlib-3.1.0.20181231";
-GCC_HOME="$PWD/../.build/src/gcc-9.1.0";
-GCC_SUPP_LIBS="$PWD/../.build//arm-none-eabi/buildtools";
-
-TMP_INSTALL_PATH="$PWD/newlib_nano_install";
-
-TARGET="arm-none-eabi";
-host_arch=`uname -m | sed 'y/XI/xi/'`;
-BUILD="$host_arch"-linux-gnu;
-HOST_NATIVE="$host_arch"-linux-gnu;
-X_TOOLS=`realpath ~/x-tools`;
-NANO_ROOT="$PWD";
-
-export CFLAGS_FOR_TARGET='-g -Os -ffunction-sections -fdata-sections';
-export PATH=$PATH:$X_TOOLS/$TARGET/bin;
-
+cd $NANO_ROOT || exit 1;
 
 # this routine comes from toolchain-scripts of ARM Holdings
 # Copy target libraries from each multilib directories.
@@ -53,11 +39,10 @@ copy_multi_libs() {
     done
 }
 
-rm -rf "$PWD/../.build/$TARGET/build";
-
 
 echo "building nano newlib..."
-mkdir newlib-build; cd newlib-build;
+mkdir -p newlib-build && cd newlib-build;
+export CFLAGS_FOR_TARGET="-g -Os -ffunction-sections -fdata-sections -fdebug-prefix-map=$NEWLIB_NANO_HOME=$(realpath $X_TOOLS/usr/src/newlib)";
 
 
 $NEWLIB_NANO_HOME/configure  \
@@ -76,16 +61,17 @@ $NEWLIB_NANO_HOME/configure  \
     --enable-newlib-global-atexit         \
     --enable-newlib-nano-formatted-io     \
     --disable-nls && make -j9 && make install;
-
-
+unset CFLAGS_FOR_TARGET;
 echo "...finished nano newlib build";
 
+
 cd $NANO_ROOT;
-mkdir gcc-build; cd gcc-build;
+
+echo "building nano g++ libs..."
+mkdir -p gcc-build && cd gcc-build;
 
 CXXFLAGS=;
 
-echo "building nano g++ libs..."
 $GCC_HOME/configure --target=$TARGET \
     --prefix=$TMP_INSTALL_PATH \
     --enable-languages=c,c++ \
@@ -113,15 +99,19 @@ $GCC_HOME/configure --target=$TARGET \
     --with-gmp="$GCC_SUPP_LIBS" \
     "--with-host-libstdcxx=-static-libgcc -Wl,-Bstatic,-lstdc++,-Bdynamic -lm"  \
     "--with-pkgversion=crosstool-NG" \
-    --with-multilib-list=rmprofile && make -j9 CXXFLAGS="${CXXFLAGS:-}" CXXFLAGS_FOR_TARGET="-g -Os -ffunction-sections -fdata-sections -fno-exceptions" && make install;
+    --with-multilib-list=rmprofile && \
+    make -j9 CXXFLAGS="${CXXFLAGS:-}" CXXFLAGS_FOR_TARGET="-g -Os -ffunction-sections -fdata-sections -fno-exceptions -fdebug-prefix-map=$GCC_HOME=$(realpath $X_TOOLS/usr/src/gcc)" \
+    CCFLAGS_FOR_TARGET="-g -Os -ffunction-sections -fdata-sections -fno-exceptions -fdebug-prefix-map=$GCC_HOME=$(realpath $X_TOOLS/usr/src/gcc)" \
+    && make install;
+
 
 echo "...finished nano g++ libs build";
 
 cd $NANO_ROOT;
 
-chmod -R u+w $X_TOOLS/$TARGET;
-mkdir $X_TOOLS/$TARGET/include/newlib-nano;
-cp -v $TMP_INSTALL_PATH/$TARGET/include/newlib.h $X_TOOLS/$TARGET/include/newlib-nano/newlib.h;
-copy_multi_libs src_prefix="$TMP_INSTALL_PATH/$TARGET/lib" dst_prefix="$X_TOOLS/$TARGET/$TARGET/lib" target_gcc="$X_TOOLS/$TARGET/bin/$TARGET-gcc";
-chmod -R u-w $X_TOOLS/$TARGET;
+chmod -R u+w $X_TOOLS;
+mkdir $X_TOOLS/include/newlib-nano;
+cp -v $TMP_INSTALL_PATH/$TARGET/include/newlib.h $X_TOOLS/include/newlib-nano/newlib.h;
+copy_multi_libs src_prefix="$TMP_INSTALL_PATH/$TARGET/lib" dst_prefix="$X_TOOLS/$TARGET/lib" target_gcc="$X_TOOLS/bin/$TARGET-gcc";
+chmod -R u-w $X_TOOLS;
 
