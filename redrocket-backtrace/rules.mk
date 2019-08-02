@@ -142,6 +142,7 @@ $(BUILD_DIR)/%.o: %.S
 $(PROJECT).elf: $(OBJS) $(LDSCRIPT) $(LIBDEPS)
 	@printf "  LD\t$@\n"
 	$(Q)$(LD) $(TGT_LDFLAGS) $(LDFLAGS) $(OBJS) $(LDLIBS) -o $@
+	$(PREFIX)size $@
 
 %.bin: %.elf
 	@printf "  OBJCOPY\t$@\n"
