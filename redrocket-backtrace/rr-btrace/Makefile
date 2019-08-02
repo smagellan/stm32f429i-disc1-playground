@@ -3,12 +3,15 @@ BUILD_DIR = bin
 
 #SHARED_DIR = ../my-common-code
 CFILES = usart_console.c clock.c stdlib_syscalls.c btrace.c
+CXXFILES=CppTest.cpp
 
 CSTD=-std=c11
+CXXSTD=-std=c++17
 INCLUDES=-I/home/vladimir/projects/backtrace/include/
+TGT_CXXFLAGS += -fno-exceptions -fno-rtti
 TGT_CFLAGS += -mpoke-function-name -funwind-tables -fno-omit-frame-pointer -fmessage-length=0 -fsigned-char -fstack-protector-strong
 TGT_LDFLAGS += -specs=nosys.specs -specs=rdimon.specs -L/home/vladimir/projects/backtrace/build/release/backtrace
-LDLIBS += -lbacktrace
+LDLIBS += -lbacktrace -lstdc++
 OPENCM3_DEFS += -DCONSOLE_UART=USART1 -D_FORTIFY_SOURCE=2
 
 # TODO - you will need to edit these two lines!

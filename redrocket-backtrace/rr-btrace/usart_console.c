@@ -31,6 +31,7 @@
 #include "clock.h"
 #include "btrace.h"
 #include "stdlib_syscalls.h"
+#include "cpptestexterns.h"
 
 /*
  * Some definitions of our console "functions" attached to the
@@ -124,6 +125,7 @@ int main(void) {
      * simple application to run on it.
      */
     printf("\nUART Demonstration Application\n");
+    printf("\ncpp test: %d\n", do_cpp_test());
     while (1) {
         printf("Enter a string: ");
         len = usart_console_gets(buf, 128);
