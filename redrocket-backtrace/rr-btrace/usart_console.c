@@ -80,6 +80,10 @@ void init_uart(void) {
 void trace_if_needed(char *cmd) {
     if (strcmp(cmd, "trace") == 0) {
         print_backtrace();
+    } else {
+        if (strcmp(cmd, "cpp") == 0) {
+            printf("\ncpp test: %d\n", do_cpp_test());
+        }
     }
 }
 
@@ -125,7 +129,6 @@ int main(void) {
      * simple application to run on it.
      */
     printf("\nUART Demonstration Application\n");
-    printf("\ncpp test: %d\n", do_cpp_test());
     while (1) {
         printf("Enter a string: ");
         len = usart_console_gets(buf, 128);
