@@ -112,11 +112,9 @@ echo "...finished nano g++ libs build";
 cd $NANO_ROOT;
 
 
-chmod -R u+w $X_TOOLS;
 mkdir $X_TOOLS/include/newlib-nano;
 cp -v $TMP_INSTALL_PATH/$TARGET/include/newlib.h $X_TOOLS/include/newlib-nano/newlib.h;
 copy_multi_libs src_prefix="$TMP_INSTALL_PATH/$TARGET/lib" dst_prefix="$X_TOOLS/$TARGET/lib" target_gcc="$X_TOOLS/bin/$TARGET-gcc";
-chmod -R u-w $X_TOOLS;
 
 
 cd $GCC_HOME && find libstdc++-v3/ -regextype egrep -iregex '.*\.(c|cpp|cc|h|hpp)' | cpio -pdm "$X_TOOLS/usr/src/gcc";
